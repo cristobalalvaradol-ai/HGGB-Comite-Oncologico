@@ -170,6 +170,7 @@ svg .base-l{stroke:var(--axis);stroke-width:1}
 .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:var(--surface);border:1px solid var(--ring);border-radius:10px;margin-bottom:16px}
 .kpi{padding:14px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
 .kpi:last-child{border-right:0}
+.kpis.k4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .kpi .l{font-size:12.5px;color:var(--muted);font-weight:550}
 .kpi .v{font-family:var(--f-display);font-weight:750;font-stretch:88%;font-size:30px;line-height:1.05}
 .kpi .d{font-size:12.5px;color:var(--ink-2)}
@@ -279,6 +280,10 @@ footer.meth .priv img{width:34px;height:34px;border-radius:50%;background:var(--
   .kpi:nth-child(3){border-right:0}
   .kpi:nth-child(n+4){grid-column:span 3;border-top:1px solid var(--line)}
   .kpi:nth-child(5){border-right:0}
+  .kpis.k4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpis.k4 .kpi{grid-column:auto;border-right:1px solid var(--line)}
+  .kpis.k4 .kpi:nth-child(2n){border-right:0}
+  .kpis.k4 .kpi:nth-child(n+3){border-top:1px solid var(--line)}
   .qtiles{grid-template-columns:repeat(2,minmax(0,1fr))}
   .s8,.s7,.s6,.s5,.s4{grid-column:span 12}
   .s3{grid-column:span 6}
@@ -293,7 +298,7 @@ footer.meth .priv img{width:34px;height:34px;border-radius:50%;background:var(--
   .kpi{border-right:1px solid var(--line)!important;border-top:1px solid var(--line)}
   .kpi:nth-child(-n+2){border-top:0}
   .kpi:nth-child(2n){border-right:0!important}
-  .kpi:last-child{grid-column:1/-1;border-right:0!important}
+  .kpi:last-child:nth-child(odd){grid-column:1/-1;border-right:0!important}
   .qtiles{grid-template-columns:1fr}
   .s3{grid-column:span 12}
   .filters{position:static}
@@ -565,7 +570,7 @@ table.ht.est td{padding:3px 2px;font-size:11px;min-width:26px}table.ht.est th{fo
           <p data-reg="El comité sesiona todos los martes en la mañana. Un martes sin presentaciones en el sistema es una sesión en que hubo comité, pero no se ingresaron los casos; los feriados no se cuentan. La duración que se muestra más abajo es solo una referencia.">El comité sesiona todos los martes en la mañana y cada caso se anota en el formulario mientras se presenta. Un martes sin respuestas es una sesión en que hubo comité, pero no se anotaron los casos; los feriados no se cuentan. La duración que se muestra más abajo es solo una referencia.</p>
           <span class="scope" id="sc-actividad"></span>
         </div>
-        <div class="kpis" id="kpis"></div>
+        <div class="kpis k4" id="kpis"></div>
         <div class="grid">
           <div class="card s12">
             <div class="card-head"><div><h3>Presentaciones por mes y tipo de caso</h3><p class="sub">Casos presentados; el color se intensifica con el número de casos</p></div></div>
@@ -583,7 +588,7 @@ table.ht.est td{padding:3px 2px;font-size:11px;min-width:26px}table.ht.est th{fo
             <p class="note" id="dur-note" style="margin-top:10px"></p>
           </div>
           <div class="card s6">
-            <div class="card-head"><div><h3>Equipo que presenta y continuidad de la agenda</h3><p class="sub" id="ops-sub"></p></div></div>
+            <div class="card-head"><div><h3>Equipo que presenta y sesiones registradas</h3><p class="sub" id="ops-sub"></p></div></div>
             <div class="mini-list" id="ops"></div>
           </div>
         </div>
@@ -664,7 +669,7 @@ table.ht.est td{padding:3px 2px;font-size:11px;min-width:26px}table.ht.est th{fo
             <div class="ht-wrap" id="ht-caso"></div>
           </div>
           <div class="card s12">
-            <div class="card-head"><div><h3>Plan según localización</h3><p class="sub">Porcentaje de las presentaciones de cada localización con cada plan · localizaciones con 8 o más presentaciones</p></div></div>
+            <div class="card-head"><div><h3>Plan según localización</h3><p class="sub">Porcentaje de las presentaciones de cada localización con cada plan · localizaciones con 8 o más presentaciones · el recto superior incluye la unión rectosigmoidea</p></div></div>
             <div class="ht-wrap" id="ht-loc"></div>
           </div>
           <div class="card s12">
@@ -966,7 +971,7 @@ function essentials(){
   document.title = 'Tablero ' + tit + ' ' + Y + ' · HGGB';
   setText('m-tit', tit); setText('m-yr', String(Y)); setText('m-proy', NX ? String(Y1) : String(Y));
   if (D.hospital) setText('m-hosp', D.hospital);
-  setText('m-per', PERL + ' · ' + nn(SES_OK.length, 'sesión', 'sesiones'));
+  setText('m-per', PERL + ' · ' + nn(SES.length, 'sesión', 'sesiones') + (SES_NO.length ? ' (' + SES_OK.length + ' con casos registrados)' : ''));
   setText('m-src', D.fuente || 'Planilla del comité');
   setText('m-resp', D.responsable || '—');
   if (D.elabora){ setText('m-elab', D.elabora); setText('f-elab', D.elabora); }
@@ -1051,13 +1056,13 @@ function projSide(){
   const pp = CERR ? [{x:fmt(P.ytd)}, ' presentaciones registradas en ', {x:fmt(P.realized) + ' de las ' + nn(P.planned, 'sesión', 'sesiones')}, ' del año, con ', {x:fmt(P.perSes, 1) + ' casos por sesión registrada'}, '.' + (P.planned > P.realized ? ' En ' + nn(P.planned - P.realized, 'sesión', 'sesiones') + ' hubo comité, pero no se anotaron los casos.' : '')]
     : ['Promedio de dos métodos: ritmo mensual (', {x:fmt(P.estRun)}, ') y martes que quedan hasta diciembre (', {x:fmt(P.estSes)}, ', con casos registrados en el ' + pc(P.realized, P.planned) + ' de las sesiones y ' + fmt(P.perSes, 1) + ' casos por sesión).'];
   if (PRELIM) pp.push(' Con menos de tres meses de datos, la estimación es preliminar.');
-  if (P.sem && P.sem[0][0] && P.sem[1][0]) pp.push(' La carga por sesión fue parecida en ambos semestres (', {x:fmt(P.sem[0][1]/P.sem[0][0], 1)}, ' y ', {x:fmt(P.sem[1][1]/P.sem[1][0], 1)}, ' casos); lo que cambió fue el número de sesiones (' + P.sem[0][0] + ' y ' + P.sem[1][0] + ').');
+  if (P.sem && P.sem[0][0] && P.sem[1][0]) pp.push(' La carga por sesión fue parecida en ambos semestres (', {x:fmt(P.sem[0][1]/P.sem[0][0], 1)}, ' y ', {x:fmt(P.sem[1][1]/P.sem[1][0], 1)}, ' casos); lo que cambió fue el número de sesiones con casos registrados (' + P.sem[0][0] + ' y ' + P.sem[1][0] + ').');
   rich(p1, pp); b1.append(p1); el.append(b1);
   if (NX){
     const b2 = h('div','blk');
     b2.append(h('p','eyebrow','Escenarios ' + Y1));
     const t = h('table','scen');
-    const th = t.createTHead().insertRow(); ['Escenario','Casos','Sesiones'].forEach(function(x){ const c = document.createElement('th'); c.textContent = x; th.append(c); });
+    const th = t.createTHead().insertRow(); ['Escenario','Casos','Sesiones registradas'].forEach(function(x){ const c = document.createElement('th'); c.textContent = x; th.append(c); });
     const tb = t.createTBody();
     const tr0 = tb.insertRow(); tr0.insertCell().textContent = Y + (CERR ? ' (real)' : ' (estimado)'); tr0.insertCell().textContent = APROX + fmt(est); tr0.insertCell().textContent = fmt(P.realized + (CERR ? 0 : Math.round(P.rem * P.realRate)));
     (NX.igual ? [['Bajo', NX.lo, NX.slo, ''], ['Medio y alto', NX.mid, NX.smid, 'mid']] : [['Bajo', NX.lo, NX.slo, ''], ['Medio', NX.mid, NX.smid, 'mid'], ['Alto', NX.hi, NX.shi, '']]).forEach(function(r){ const tr = tb.insertRow(); if (r[3]) tr.className = r[3]; tr.insertCell().textContent = Y1 + ' ' + r[0].toLowerCase(); const c2 = tr.insertCell(); c2.append(h('b','num','≈' + fmt(r[1]))); tr.insertCell().textContent = fmt(r[2]); });
